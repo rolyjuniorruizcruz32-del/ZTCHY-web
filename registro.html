@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuario</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .registro-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        .registro-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .registro-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .registro-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .exito {
+            background: #efe;
+            color: #3c3;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3c3;
+            text-align: center;
+            display: none;
+        }
+        
+        .exito.show {
+            display: block;
+        }
+        
+        .exito h2 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        
+        .exito p {
+            margin-bottom: 15px;
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .links a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #registroForm {
+            display: block;
+        }
+        
+        #registroForm.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="registro-container">
+        <div class="registro-header">
+            <h1>📝 Crear Cuenta</h1>
+            <p>Completa el formulario para registrarte</p>
+        </div>
+        
+        <div id="errorMsg" class="error"></div>
+        <div id="exitoDiv" class="exito">
+            <h2>✅ Registro Exitoso</h2>
+            <p id="exitoTexto"></p>
+            <a href="index.html" class="btn">Iniciar Sesión</a>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Procesando...</p>
+        </div>
+        
+        <form id="registroForm">
+            <div class="form-group">
+                <label for="nombre">Nombre Completo</label>
+                <input type="text" id="nombre" name="nombre" required autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+                <small>Usa un email válido para confirmar tu cuenta</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required>
+                <small>Mínimo 6 caracteres</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmar_password">Confirmar Contraseña</label>
+                <input type="password" id="confirmar_password" name="confirmar_password" required>
+            </div>
+            
+            <button type="submit" class="btn" id="registroBtn">Registrarse</button>
+        </form>
+        
+        <div class="links">
+            <a href="index.html">← Volver al inicio de sesión</a>
+        </div>
+    </div>
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        // Inicializar Supabase
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Elementos del DOM
+        const registroForm = document.getElementById('registroForm');
+        const registroBtn = document.getElementById('registroBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const exitoDiv = document.getElementById('exitoDiv');
+        const exitoTexto = document.getElementById('exitoTexto');
+        const loading = document.getElementById('loading');
+
+        // Función para mostrar errores
+        function mostrarError(mensaje) {
+            errorMsg.textContent = mensaje;
+            errorMsg.classList.add('show');
+            setTimeout(() => {
+                errorMsg.classList.remove('show');
+            }, 5000);
+        }
+
+        // Función para mostrar éxito
+        function mostrarExito(mensaje) {
+            exitoTexto.textContent = mensaje;
+            exitoDiv.classList.add('show');
+            registroForm.classList.add('hidden');
+        }
+
+        // Manejar el registro
+        registroForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('nombre').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmarPassword = document.getElementById('confirmar_password').value;
+
+            // Validaciones
+            if (!nombre || !email || !password || !confirmarPassword) {
+                mostrarError('Por favor completa todos los campos');
+                return;
+            }
+
+            if (password.length < 6) {
+                mostrarError('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            if (password !== confirmarPassword) {
+                mostrarError('Las contraseñas no coinciden');
+                return;
+            }
+
+            // Mostrar loading
+            loading.classList.add('show');
+            registroBtn.disabled = true;
+            errorMsg.classList.remove('show');
+
+            try {
+                // Registrar usuario con Supabase Auth
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            nombre_completo: nombre
+                        }
+                    }
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                // Registro exitoso
+                if (data.user) {
+                    // Verificar si necesita confirmación de email
+                    if (data.user.identities && data.user.identities.length === 0) {
+                        mostrarError('Este email ya está registrado');
+                        registroBtn.disabled = false;
+                    } else {
+                        // Insertar datos adicionales en tabla de perfiles (opcional)
+                        const { error: profileError } = await supabaseClient
+                            .from('perfiles')
+                            .insert([
+                                { 
+                                    id: data.user.id,
+                                    nombre_completo: nombre,
+                                    email: email
+                                }
+                            ]);
+
+                        // Mostrar mensaje de éxito (incluso si falla el perfil)
+                        mostrarExito('Tu cuenta ha sido creada. Revisa tu email para confirmarla.');
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                
+                if (error.message.includes('User already registered')) {
+                    mostrarError('Este email ya está registrado');
+                } else if (error.message.includes('Password should be at least')) {
+                    mostrarError('La contraseña debe tener al menos 6 caracteres');
+                } else {
+                    mostrarError('Error al registrar: ' + error.message);
+                }
+                
+                registroBtn.disabled = false;
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
