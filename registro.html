@@ -12,85 +12,39 @@
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-
     <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl">
         <div class="text-center mb-8">
             <h1 class="text-4xl font-black italic tracking-tighter text-white">ZTCHY <span class="text-indigo-500 text-2xl">WEB</span></h1>
             <p id="status-msg" class="text-emerald-500 text-[10px] mt-2 uppercase tracking-widest font-black">✅ SISTEMA CONECTADO</p>
         </div>
-
         <form id="registroForm" class="space-y-5">
-            <input type="text" name="nombre" required placeholder="Nombre Completo" 
-                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
-            
-            <input type="email" name="email" required placeholder="Correo Electrónico" 
-                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
-            
-            <input type="password" name="password" required minlength="6" placeholder="Contraseña" 
-                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
-
-            <button type="submit" id="btnSubmit"
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-500/20 transition-all active:scale-95 uppercase text-xs tracking-widest">
-                Crear Cuenta Gratis
-            </button>
+            <input type="text" name="nombre" required placeholder="Nombre Completo" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <input type="email" name="email" required placeholder="Correo Electrónico" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <input type="password" name="password" required minlength="6" placeholder="Contraseña" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <button type="submit" id="btnSubmit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest">Crear Cuenta Gratis</button>
         </form>
-
-        <p class="text-center mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-            ¿Ya tienes cuenta? <a href="indice.html" class="text-indigo-400 hover:underline">Inicia sesión</a>
-        </p>
     </div>
-
     <script>
         const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         document.getElementById('registroForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const btn = document.getElementById('btnSubmit');
-            btn.innerText = "PROCESANDO...";
-            btn.disabled = true;
-
+            btn.innerText = "PROCESANDO..."; btn.disabled = true;
             const formData = new FormData(e.target);
             const email = formData.get('email');
             const password = formData.get('password');
             const nombre = formData.get('nombre');
-
             try {
-                // 1. Registro Auth
-                const { error: authError } = await supabaseClient.auth.signUp({
-                    email, password, options: { data: { full_name: nombre } }
-                });
+                const { error: authError } = await supabaseClient.auth.signUp({ email, password, options: { data: { full_name: nombre } } });
                 if (authError) throw authError;
-
-                // 2. Generar Código
                 const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-                
-                // 3. Guardar en DB (AHORA INCLUYE EL CAMPO 'tipo')
-                const { error: dbError } = await supabaseClient
-                    .from('codigos_verificacion')
-                    .insert([{ 
-                        email: email, 
-                        codigo: codigo, 
-                        tipo: 'registro', // <--- SOLUCIÓN AL ERROR DE TU CAPTURA
-                        expira_en: new Date(Date.now() + 15*60000).toISOString() 
-                    }]);
+                const { error: dbError } = await supabaseClient.from('codigos_verificacion').insert([{ email, codigo, tipo: 'registro', expira_en: new Date(Date.now() + 15*60000).toISOString() }]);
                 if (dbError) throw dbError;
-
-                // 4. Enviar Email
-                await fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
-                });
-
+                await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' }) });
                 window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
-            } catch (err) {
-                alert("Error: " + err.message);
-                btn.innerText = "CREAR CUENTA GRATIS";
-                btn.disabled = false;
-            }
+            } catch (err) { alert("Error: " + err.message); btn.innerText = "Crear Cuenta Gratis"; btn.disabled = false; }
         });
     </script>
 </body>
