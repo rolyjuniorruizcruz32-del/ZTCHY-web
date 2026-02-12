@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Código - ZTCHY Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #020617; color: white; font-family: sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .otp-input { letter-spacing: 0.5em; text-align: center; font-size: 2rem; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl text-center">
+        <h1 class="text-3xl font-black italic tracking-tighter text-white mb-2">VERIFICAR <span class="text-indigo-500">EMAIL</span></h1>
+        <p id="user-email" class="text-slate-400 text-xs font-medium mb-8">Cargando...</p>
+
+        <form id="verificarForm" class="space-y-6">
+            <div class="relative">
+                <input type="text" id="codigo" maxlength="6" required placeholder="000000"
+                    class="otp-input w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white placeholder:text-slate-700 font-mono">
+            </div>
+
+            <button type="submit" id="btnVerify"
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest">
+                Confirmar Código
+            </button>
+        </form>
+
+        <div id="msg" class="mt-6 text-[10px] font-bold uppercase tracking-widest hidden"></div>
+        
+        <p class="mt-8 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            ¿No recibiste nada? <button onclick="location.reload()" class="text-indigo-400">Reintentar</button>
+        </p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Obtener email de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        if (email) document.getElementById('user-email').innerText = email;
+
+        document.getElementById('verificarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnVerify');
+            const msg = document.getElementById('msg');
+            const inputCodigo = document.getElementById('codigo').value;
+
+            btn.innerText = "VERIFICANDO...";
+            btn.disabled = true;
+            msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-indigo-400";
+            msg.innerText = "Buscando código...";
+
+            try {
+                // 1. Buscar el código en la tabla
+                const { data, error } = await supabaseClient
+                    .from('codigos_verificacion')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('codigo', inputCodigo)
+                    .eq('usado', false)
+                    .order('creado_en', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (error || !data) throw new Error("Código incorrecto o ya utilizado.");
+
+                // 2. Verificar si expiró (15 min)
+                if (new Date(data.expira_en) < new Date()) {
+                    throw new Error("El código ha expirado. Regístrate de nuevo.");
+                }
+
+                // 3. Marcar como usado
+                await supabaseClient
+                    .from('codigos_verificacion')
+                    .update({ usado: true })
+                    .eq('id', data.id);
+
+                msg.innerText = "¡CÓDIGO CORRECTO! REDIRIGIENDO...";
+                msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-emerald-400";
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html'; // Cambia esto a tu dashboard
+                }, 2000);
+
+            } catch (err) {
+                msg.innerText = "ERROR: " + err.message;
+                msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-rose-500";
+                btn.innerText = "CONFIRMAR CÓDIGO";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
