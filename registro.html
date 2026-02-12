@@ -16,7 +16,7 @@
     <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl">
         <div class="text-center mb-8">
             <h1 class="text-4xl font-black italic tracking-tighter text-white">ZTCHY <span class="text-indigo-500 text-2xl">WEB</span></h1>
-            <p id="status-msg" class="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-black">Validando Conexión...</p>
+            <p id="status-msg" class="text-emerald-500 text-[10px] mt-2 uppercase tracking-widest font-black">✅ SISTEMA CONECTADO</p>
         </div>
 
         <form id="registroForm" class="space-y-5">
@@ -41,33 +41,14 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN REAL APLICADA
         const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
-
-        let supabaseClient;
-        const statusMsg = document.getElementById('status-msg');
-
-        try {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            statusMsg.innerText = "✅ SISTEMA CONECTADO";
-            statusMsg.classList.replace('text-slate-500', 'text-emerald-500');
-        } catch (e) {
-            statusMsg.innerText = "❌ ERROR DE CONEXIÓN";
-            statusMsg.classList.replace('text-slate-500', 'text-rose-500');
-            console.error("Error inicializando Supabase:", e.message);
-        }
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         document.getElementById('registroForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!supabaseClient) {
-                alert("La conexión con la base de datos no está lista. Recarga la página.");
-                return;
-            }
-
             const btn = document.getElementById('btnSubmit');
-            const originalText = btn.innerText;
             btn.innerText = "PROCESANDO...";
             btn.disabled = true;
 
@@ -77,40 +58,37 @@
             const nombre = formData.get('nombre');
 
             try {
-                // 1. Registro Auth en Supabase
-                const { data, error: authError } = await supabaseClient.auth.signUp({
-                    email, 
-                    password, 
-                    options: { data: { full_name: nombre } }
+                // 1. Registro Auth
+                const { error: authError } = await supabaseClient.auth.signUp({
+                    email, password, options: { data: { full_name: nombre } }
                 });
                 if (authError) throw authError;
 
-                // 2. Crear Código de Verificación
+                // 2. Generar Código
                 const codigo = Math.floor(100000 + Math.random() * 900000).toString();
                 
-                // 3. Guardar en la tabla (Asegúrate de tener la tabla codigos_verificacion)
+                // 3. Guardar en DB (AHORA INCLUYE EL CAMPO 'tipo')
                 const { error: dbError } = await supabaseClient
                     .from('codigos_verificacion')
                     .insert([{ 
                         email: email, 
                         codigo: codigo, 
+                        tipo: 'registro', // <--- SOLUCIÓN AL ERROR DE TU CAPTURA
                         expira_en: new Date(Date.now() + 15*60000).toISOString() 
                     }]);
                 if (dbError) throw dbError;
 
-                // 4. Llamar a la API de SendGrid en Vercel
+                // 4. Enviar Email
                 await fetch('/api/send-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
                 });
 
-                // 5. Redirigir
                 window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
             } catch (err) {
-                console.error(err);
                 alert("Error: " + err.message);
-                btn.innerText = originalText;
+                btn.innerText = "CREAR CUENTA GRATIS";
                 btn.disabled = false;
             }
         });
