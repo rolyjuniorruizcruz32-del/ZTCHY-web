@@ -1,318 +1,83 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - ZTCHY Web</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 450px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: #333;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .form-group small {
-            display: block;
-            margin-top: 5px;
-            color: #999;
-            font-size: 12px;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .error, .mensaje {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            border-left: 4px solid #c33;
-        }
-        .mensaje {
-            background: #efe;
-            color: #3c3;
-            border-left: 4px solid #3c3;
-        }
-        .error.show, .mensaje.show {
-            display: block;
-        }
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .links a {
-            color: #667eea;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        .links a:hover {
-            text-decoration: underline;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 10px 0;
-        }
-        .loading.show {
-            display: block;
-        }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📝 Crear Cuenta</h1>
-            <p>Completa el formulario para registrarte</p>
-        </div>
+<!-- Asegúrate de que este script esté en el <head> -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+// 1. CONFIGURACIÓN (REEMPLAZA CON TUS DATOS)
+const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+const SUPABASE_ANON_KEY = 'tu-clave-anon-aqui';
+
+// 2. INICIALIZACIÓN ÚNICA (Evita el error "already declared")
+let supabaseClient;
+try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("✅ Conectado a Supabase");
+} catch (e) {
+    console.error("❌ Error de configuración:", e.message);
+}
+
+// 3. MANEJO DEL FORMULARIO
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault(); // EVITA QUE LA PÁGINA SE BORRE/RECARGUE
         
-        <div id="errorMsg" class="error"></div>
-        <div id="successMsg" class="mensaje"></div>
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Procesando...</p>
-        </div>
-        
-        <form id="registroForm">
-            <div class="form-group">
-                <label for="nombre">Nombre Completo</label>
-                <input type="text" id="nombre" name="nombre" required autofocus>
-            </div>
-            
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
-                <small>Recibirás un código de verificación</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" required>
-                <small>Mínimo 6 caracteres</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirmar_password">Confirmar Contraseña</label>
-                <input type="password" id="confirmar_password" name="confirmar_password" required>
-            </div>
-            
-            <button type="submit" class="btn" id="registroBtn">Registrarse</button>
-        </form>
-        
-        <div class="links">
-            <a href="index.html">← Volver al inicio de sesión</a>
-        </div>
-    </div>
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerText;
+        btn.innerText = "Procesando...";
+        btn.disabled = true;
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
-    <script src="sendgrid.js"></script>
-    <script>
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const formData = new FormData(form);
+        const email = formData.get('email');
+        const password = formData.get('password');
+        const nombre = formData.get('nombre');
 
-        const registroForm = document.getElementById('registroForm');
-        const registroBtn = document.getElementById('registroBtn');
-        const errorMsg = document.getElementById('errorMsg');
-        const successMsg = document.getElementById('successMsg');
-        const loading = document.getElementById('loading');
+        try {
+            // A. Registrar en Supabase Auth
+            const { data, error: authError } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: { data: { full_name: nombre } }
+            });
 
-        function mostrarError(mensaje) {
-            errorMsg.textContent = mensaje;
-            errorMsg.classList.add('show');
-            successMsg.classList.remove('show');
-            setTimeout(() => errorMsg.classList.remove('show'), 5000);
+            if (authError) throw authError;
+
+            // B. Generar Código
+            const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // C. Guardar en Base de Datos
+            const { error: dbError } = await supabaseClient
+                .from('codigos_verificacion')
+                .insert([{ 
+                    email: email, 
+                    codigo: codigo, 
+                    usado: false,
+                    expira_en: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+                }]);
+
+            if (dbError) throw dbError;
+
+            // D. Enviar Email (Llamada a tu API de Vercel)
+            const response = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
+            });
+
+            if (!response.ok) throw new Error("Error al enviar el correo");
+
+            alert("¡Código enviado! Revisa tu bandeja de entrada.");
+            // Redirigir al archivo que tienes en GitHub
+            window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
+
+        } catch (err) {
+            alert("Error: " + err.message);
+            console.error(err);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
         }
-
-        function mostrarExito(mensaje) {
-            successMsg.textContent = mensaje;
-            successMsg.classList.add('show');
-            errorMsg.classList.remove('show');
-        }
-
-        registroForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const nombre = document.getElementById('nombre').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const confirmarPassword = document.getElementById('confirmar_password').value;
-
-            if (!nombre || !email || !password || !confirmarPassword) {
-                mostrarError('Por favor completa todos los campos');
-                return;
-            }
-
-            if (password.length < 6) {
-                mostrarError('La contraseña debe tener al menos 6 caracteres');
-                return;
-            }
-
-            if (password !== confirmarPassword) {
-                mostrarError('Las contraseñas no coinciden');
-                return;
-            }
-
-            loading.classList.add('show');
-            registroBtn.disabled = true;
-            errorMsg.classList.remove('show');
-
-            try {
-                console.log('=== INICIO DEL REGISTRO ===');
-                console.log('Email:', email);
-                console.log('Nombre:', nombre);
-                
-                // Registrar usuario en Supabase
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            nombre_completo: nombre
-                        },
-                        emailRedirectTo: window.location.origin + '/verificar-email.html'
-                    }
-                });
-
-                console.log('Respuesta de Supabase:', data);
-                if (error) {
-                    console.error('Error de Supabase:', error);
-                    throw error;
-                }
-
-                if (data.user) {
-                    console.log('Usuario creado:', data.user.id);
-                    
-                    // Generar código de 6 dígitos
-                    const codigo = generarCodigoVerificacion();
-                    console.log('Código generado:', codigo);
-                    
-                    // Guardar código en Supabase
-                    console.log('Guardando código en base de datos...');
-                    const resultGuardar = await guardarCodigoVerificacion(supabaseClient, data.user.id, email, codigo, 'registro');
-                    console.log('Resultado guardar código:', resultGuardar);
-                    
-                    // Enviar email con código
-                    console.log('Intentando enviar email a:', email);
-                    console.log('SENDGRID_API_KEY disponible:', typeof SENDGRID_API_KEY !== 'undefined' && SENDGRID_API_KEY !== '');
-                    
-                    const resultEmail = await enviarCodigoVerificacion(email, codigo, nombre);
-                    console.log('Resultado del envío de email:', resultEmail);
-                    
-                    if (resultEmail.success) {
-                        console.log('✅ Email enviado exitosamente');
-                        
-                        // Guardar email en localStorage para la página de verificación
-                        localStorage.setItem('email_verificacion', email);
-                        localStorage.setItem('user_id', data.user.id);
-                        
-                        mostrarExito('¡Registro exitoso! Revisa tu email para el código de verificación.');
-                        
-                        setTimeout(() => {
-                            console.log('Redirigiendo a verificar-email.html...');
-                            window.location.href = 'verificar-email.html';
-                        }, 2000);
-                    } else {
-                        console.error('❌ Error al enviar email:', resultEmail.error);
-                        mostrarError('Error al enviar el código. Por favor intenta de nuevo.');
-                        registroBtn.disabled = false;
-                    }
-                }
-            } catch (error) {
-                console.error('❌ ERROR GENERAL:', error);
-                
-                if (error.message.includes('User already registered')) {
-                    mostrarError('Este email ya está registrado');
-                } else {
-                    mostrarError('Error al registrar: ' + error.message);
-                }
-                
-                registroBtn.disabled = false;
-            } finally {
-                loading.classList.remove('show');
-            }
-        });
-    </script>
-</body>
-</html>
+    });
+});
+</script>
