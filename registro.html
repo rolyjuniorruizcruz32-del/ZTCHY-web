@@ -4,121 +4,112 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - ZTCHY Web</title>
-    <!-- 1. Estilos y Librerías -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        body { background: #020617; color: white; font-family: sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="glass max-w-md w-full p-8 rounded-[2.5rem] shadow-2xl">
+    <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl">
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-black italic tracking-tighter">ZTCHY <span class="text-indigo-500">WEB</span></h1>
-            <p class="text-slate-400 text-sm mt-2">Crea tu cuenta para comenzar</p>
+            <h1 class="text-4xl font-black italic tracking-tighter text-white">ZTCHY <span class="text-indigo-500 text-2xl">WEB</span></h1>
+            <p id="status-msg" class="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-black">Validando Conexión...</p>
         </div>
 
-        <form id="registroForm" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Nombre Completo</label>
-                <input type="text" name="nombre" required placeholder="Tu nombre" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Correo Electrónico</label>
-                <input type="email" name="email" required placeholder="correo@ejemplo.com" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Contraseña</label>
-                <input type="password" name="password" required minlength="6" placeholder="••••••••" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-            </div>
+        <form id="registroForm" class="space-y-5">
+            <input type="text" name="nombre" required placeholder="Nombre Completo" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
+            
+            <input type="email" name="email" required placeholder="Correo Electrónico" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
+            
+            <input type="password" name="password" required minlength="6" placeholder="Contraseña" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600">
 
             <button type="submit" id="btnSubmit"
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-                Registrarse
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-500/20 transition-all active:scale-95 uppercase text-xs tracking-widest">
+                Crear Cuenta Gratis
             </button>
         </form>
 
-        <div class="mt-8 text-center">
-            <a href="indice.html" class="text-slate-500 text-xs hover:text-indigo-400 transition-colors">¿Ya tienes cuenta? Inicia sesión</a>
-        </div>
+        <p class="text-center mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            ¿Ya tienes cuenta? <a href="indice.html" class="text-indigo-400 hover:underline">Inicia sesión</a>
+        </p>
     </div>
 
     <script>
-        // CONFIGURACIÓN (REEMPLAZA ESTO CON TUS DATOS DE SUPABASE)
+        // CONFIGURACIÓN REAL APLICADA
         const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
 
         let supabaseClient;
+        const statusMsg = document.getElementById('status-msg');
+
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log("✅ Conectado a Supabase correctamente");
+            statusMsg.innerText = "✅ SISTEMA CONECTADO";
+            statusMsg.classList.replace('text-slate-500', 'text-emerald-500');
         } catch (e) {
-            console.error("❌ Error inicializando Supabase:", e.message);
+            statusMsg.innerText = "❌ ERROR DE CONEXIÓN";
+            statusMsg.classList.replace('text-slate-500', 'text-rose-500');
+            console.error("Error inicializando Supabase:", e.message);
         }
 
-        const form = document.getElementById('registroForm');
-        const btn = document.getElementById('btnSubmit');
-
-        form.addEventListener('submit', async (e) => {
+        document.getElementById('registroForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            if (!supabaseClient) {
+                alert("La conexión con la base de datos no está lista. Recarga la página.");
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmit');
             const originalText = btn.innerText;
-            btn.innerText = "Procesando...";
+            btn.innerText = "PROCESANDO...";
             btn.disabled = true;
 
-            const formData = new FormData(form);
+            const formData = new FormData(e.target);
             const email = formData.get('email');
             const password = formData.get('password');
             const nombre = formData.get('nombre');
 
             try {
-                // 1. Registro en Supabase Auth
+                // 1. Registro Auth en Supabase
                 const { data, error: authError } = await supabaseClient.auth.signUp({
-                    email,
-                    password,
+                    email, 
+                    password, 
                     options: { data: { full_name: nombre } }
                 });
-
                 if (authError) throw authError;
 
-                // 2. Generar Código de 6 dígitos
+                // 2. Crear Código de Verificación
                 const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-
-                // 3. Guardar código en la tabla
+                
+                // 3. Guardar en la tabla (Asegúrate de tener la tabla codigos_verificacion)
                 const { error: dbError } = await supabaseClient
                     .from('codigos_verificacion')
                     .insert([{ 
                         email: email, 
                         codigo: codigo, 
-                        usado: false,
-                        expira_en: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+                        expira_en: new Date(Date.now() + 15*60000).toISOString() 
                     }]);
-
                 if (dbError) throw dbError;
 
-                // 4. Enviar Email vía API de Vercel
-                const response = await fetch('/api/send-email', {
+                // 4. Llamar a la API de SendGrid en Vercel
+                await fetch('/api/send-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
                 });
 
-                if (!response.ok) throw new Error("No se pudo enviar el email. Revisa Vercel.");
-
-                alert("¡Código enviado! Revisa tu correo.");
+                // 5. Redirigir
                 window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
-
             } catch (err) {
-                alert("Error: " + err.message);
                 console.error(err);
-            } finally {
+                alert("Error: " + err.message);
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
