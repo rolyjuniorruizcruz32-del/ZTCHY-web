@@ -8,7 +8,10 @@ function generarCodigoVerificacion() {
 // Enviar email de verificación con código de 6 dígitos
 async function enviarCodigoVerificacion(email, codigo, nombre = 'Usuario') {
     try {
-        const apiKey = SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
+        const apiKey = SENDGRID_API_KEY;
+        
+        console.log('Enviando email con SendGrid...');
+        console.log('API Key presente:', !!apiKey);
         
         const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
             method: 'POST',
@@ -115,15 +118,18 @@ async function enviarCodigoVerificacion(email, codigo, nombre = 'Usuario') {
             })
         });
 
+        console.log('Respuesta SendGrid status:', response.status);
+
         if (!response.ok) {
             const error = await response.text();
-            console.error('SendGrid error:', error);
+            console.error('Error de SendGrid:', error);
             throw new Error('Error al enviar email: ' + response.status);
         }
 
+        console.log('✅ Email enviado correctamente');
         return { success: true };
     } catch (error) {
-        console.error('Error al enviar email:', error);
+        console.error('❌ Error al enviar email:', error);
         return { success: false, error: error.message };
     }
 }
@@ -131,7 +137,7 @@ async function enviarCodigoVerificacion(email, codigo, nombre = 'Usuario') {
 // Enviar email de recuperación de contraseña con código de 6 dígitos
 async function enviarCodigoRecuperacion(email, codigo, nombre = 'Usuario') {
     try {
-        const apiKey = SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
+        const apiKey = SENDGRID_API_KEY;
         
         const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
             method: 'POST',
