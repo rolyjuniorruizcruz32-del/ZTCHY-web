@@ -1,83 +1,128 @@
-<!-- Asegúrate de que este script esté en el <head> -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - ZTCHY Web</title>
+    <!-- 1. Estilos y Librerías -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
 
-<script>
-// 1. CONFIGURACIÓN (REEMPLAZA CON TUS DATOS)
-const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-const SUPABASE_ANON_KEY = 'tu-clave-anon-aqui';
+    <div class="glass max-w-md w-full p-8 rounded-[2.5rem] shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black italic tracking-tighter">ZTCHY <span class="text-indigo-500">WEB</span></h1>
+            <p class="text-slate-400 text-sm mt-2">Crea tu cuenta para comenzar</p>
+        </div>
 
-// 2. INICIALIZACIÓN ÚNICA (Evita el error "already declared")
-let supabaseClient;
-try {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("✅ Conectado a Supabase");
-} catch (e) {
-    console.error("❌ Error de configuración:", e.message);
-}
+        <form id="registroForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Nombre Completo</label>
+                <input type="text" name="nombre" required placeholder="Tu nombre" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
 
-// 3. MANEJO DEL FORMULARIO
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.querySelector('form');
-    if (!form) return;
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Correo Electrónico</label>
+                <input type="email" name="email" required placeholder="correo@ejemplo.com" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // EVITA QUE LA PÁGINA SE BORRE/RECARGUE
-        
-        const btn = form.querySelector('button[type="submit"]');
-        const originalText = btn.innerText;
-        btn.innerText = "Procesando...";
-        btn.disabled = true;
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 ml-1">Contraseña</label>
+                <input type="password" name="password" required minlength="6" placeholder="••••••••" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
 
-        const formData = new FormData(form);
-        const email = formData.get('email');
-        const password = formData.get('password');
-        const nombre = formData.get('nombre');
+            <button type="submit" id="btnSubmit"
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                Registrarse
+            </button>
+        </form>
 
+        <div class="mt-8 text-center">
+            <a href="indice.html" class="text-slate-500 text-xs hover:text-indigo-400 transition-colors">¿Ya tienes cuenta? Inicia sesión</a>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN (REEMPLAZA ESTO CON TUS DATOS DE SUPABASE)
+        const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
+
+        let supabaseClient;
         try {
-            // A. Registrar en Supabase Auth
-            const { data, error: authError } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: { data: { full_name: nombre } }
-            });
-
-            if (authError) throw authError;
-
-            // B. Generar Código
-            const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-
-            // C. Guardar en Base de Datos
-            const { error: dbError } = await supabaseClient
-                .from('codigos_verificacion')
-                .insert([{ 
-                    email: email, 
-                    codigo: codigo, 
-                    usado: false,
-                    expira_en: new Date(Date.now() + 15 * 60 * 1000).toISOString()
-                }]);
-
-            if (dbError) throw dbError;
-
-            // D. Enviar Email (Llamada a tu API de Vercel)
-            const response = await fetch('/api/send-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
-            });
-
-            if (!response.ok) throw new Error("Error al enviar el correo");
-
-            alert("¡Código enviado! Revisa tu bandeja de entrada.");
-            // Redirigir al archivo que tienes en GitHub
-            window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
-
-        } catch (err) {
-            alert("Error: " + err.message);
-            console.error(err);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log("✅ Conectado a Supabase correctamente");
+        } catch (e) {
+            console.error("❌ Error inicializando Supabase:", e.message);
         }
-    });
-});
-</script>
+
+        const form = document.getElementById('registroForm');
+        const btn = document.getElementById('btnSubmit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalText = btn.innerText;
+            btn.innerText = "Procesando...";
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const nombre = formData.get('nombre');
+
+            try {
+                // 1. Registro en Supabase Auth
+                const { data, error: authError } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { full_name: nombre } }
+                });
+
+                if (authError) throw authError;
+
+                // 2. Generar Código de 6 dígitos
+                const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+
+                // 3. Guardar código en la tabla
+                const { error: dbError } = await supabaseClient
+                    .from('codigos_verificacion')
+                    .insert([{ 
+                        email: email, 
+                        codigo: codigo, 
+                        usado: false,
+                        expira_en: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+                    }]);
+
+                if (dbError) throw dbError;
+
+                // 4. Enviar Email vía API de Vercel
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, codigo, nombre, tipo: 'registro' })
+                });
+
+                if (!response.ok) throw new Error("No se pudo enviar el email. Revisa Vercel.");
+
+                alert("¡Código enviado! Revisa tu correo.");
+                window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                console.error(err);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
