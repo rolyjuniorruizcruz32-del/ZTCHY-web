@@ -3,14 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Usuario</title>
+    <title>Registro - ZTCHY Web</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,8 +15,7 @@
             align-items: center;
             padding: 20px;
         }
-        
-        .registro-container {
+        .container {
             background: white;
             padding: 40px;
             border-radius: 10px;
@@ -29,27 +23,22 @@
             width: 100%;
             max-width: 450px;
         }
-        
-        .registro-header {
+        .header {
             text-align: center;
             margin-bottom: 30px;
         }
-        
-        .registro-header h1 {
+        .header h1 {
             color: #333;
             font-size: 28px;
             margin-bottom: 10px;
         }
-        
-        .registro-header p {
+        .header p {
             color: #666;
             font-size: 14px;
         }
-        
         .form-group {
             margin-bottom: 20px;
         }
-        
         .form-group label {
             display: block;
             margin-bottom: 8px;
@@ -57,7 +46,6 @@
             font-weight: 500;
             font-size: 14px;
         }
-        
         .form-group input {
             width: 100%;
             padding: 12px 15px;
@@ -66,19 +54,16 @@
             font-size: 14px;
             transition: border-color 0.3s;
         }
-        
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
         }
-        
         .form-group small {
             display: block;
             margin-top: 5px;
             color: #999;
             font-size: 12px;
         }
-        
         .btn {
             width: 100%;
             padding: 12px;
@@ -91,88 +76,55 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
-        
-        .error {
-            background: #fee;
-            color: #c33;
+        .error, .mensaje {
             padding: 12px;
             border-radius: 5px;
             margin-bottom: 20px;
-            border-left: 4px solid #c33;
             font-size: 14px;
             display: none;
         }
-        
-        .error.show {
-            display: block;
+        .error {
+            background: #fee;
+            color: #c33;
+            border-left: 4px solid #c33;
         }
-        
-        .exito {
+        .mensaje {
             background: #efe;
             color: #3c3;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
             border-left: 4px solid #3c3;
-            text-align: center;
-            display: none;
         }
-        
-        .exito.show {
+        .error.show, .mensaje.show {
             display: block;
         }
-        
-        .exito h2 {
-            margin-bottom: 10px;
-            font-size: 20px;
-        }
-        
-        .exito p {
-            margin-bottom: 15px;
-        }
-        
         .links {
             text-align: center;
             margin-top: 20px;
         }
-        
         .links a {
             color: #667eea;
             text-decoration: none;
             font-size: 14px;
-            transition: color 0.3s;
         }
-        
         .links a:hover {
-            color: #764ba2;
             text-decoration: underline;
         }
-        
         .loading {
             display: none;
             text-align: center;
             margin: 10px 0;
         }
-        
         .loading.show {
             display: block;
         }
-        
         .spinner {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #667eea;
@@ -182,35 +134,21 @@
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        #registroForm {
-            display: block;
-        }
-        
-        #registroForm.hidden {
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <div class="registro-container">
-        <div class="registro-header">
+    <div class="container">
+        <div class="header">
             <h1>📝 Crear Cuenta</h1>
             <p>Completa el formulario para registrarte</p>
         </div>
         
         <div id="errorMsg" class="error"></div>
-        <div id="exitoDiv" class="exito">
-            <h2>✅ Registro Exitoso</h2>
-            <p id="exitoTexto"></p>
-            <a href="index.html" class="btn">Iniciar Sesión</a>
-        </div>
-        
+        <div id="successMsg" class="mensaje"></div>
         <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Procesando...</p>
@@ -225,7 +163,7 @@
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" required>
-                <small>Usa un email válido para confirmar tu cuenta</small>
+                <small>Recibirás un código de verificación</small>
             </div>
             
             <div class="form-group">
@@ -247,39 +185,32 @@
         </div>
     </div>
 
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="sendgrid.js"></script>
     <script>
-        // Inicializar Supabase
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Elementos del DOM
         const registroForm = document.getElementById('registroForm');
         const registroBtn = document.getElementById('registroBtn');
         const errorMsg = document.getElementById('errorMsg');
-        const exitoDiv = document.getElementById('exitoDiv');
-        const exitoTexto = document.getElementById('exitoTexto');
+        const successMsg = document.getElementById('successMsg');
         const loading = document.getElementById('loading');
 
-        // Función para mostrar errores
         function mostrarError(mensaje) {
             errorMsg.textContent = mensaje;
             errorMsg.classList.add('show');
-            setTimeout(() => {
-                errorMsg.classList.remove('show');
-            }, 5000);
+            successMsg.classList.remove('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 5000);
         }
 
-        // Función para mostrar éxito
         function mostrarExito(mensaje) {
-            exitoTexto.textContent = mensaje;
-            exitoDiv.classList.add('show');
-            registroForm.classList.add('hidden');
+            successMsg.textContent = mensaje;
+            successMsg.classList.add('show');
+            errorMsg.classList.remove('show');
         }
 
-        // Manejar el registro
         registroForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -288,7 +219,6 @@
             const password = document.getElementById('password').value;
             const confirmarPassword = document.getElementById('confirmar_password').value;
 
-            // Validaciones
             if (!nombre || !email || !password || !confirmarPassword) {
                 mostrarError('Por favor completa todos los campos');
                 return;
@@ -304,57 +234,76 @@
                 return;
             }
 
-            // Mostrar loading
             loading.classList.add('show');
             registroBtn.disabled = true;
             errorMsg.classList.remove('show');
 
             try {
-                // Registrar usuario con Supabase Auth
+                console.log('=== INICIO DEL REGISTRO ===');
+                console.log('Email:', email);
+                console.log('Nombre:', nombre);
+                
+                // Registrar usuario en Supabase
                 const { data, error } = await supabaseClient.auth.signUp({
                     email: email,
                     password: password,
                     options: {
                         data: {
                             nombre_completo: nombre
-                        }
+                        },
+                        emailRedirectTo: window.location.origin + '/verificar-email.html'
                     }
                 });
 
+                console.log('Respuesta de Supabase:', data);
                 if (error) {
+                    console.error('Error de Supabase:', error);
                     throw error;
                 }
 
-                // Registro exitoso
                 if (data.user) {
-                    // Verificar si necesita confirmación de email
-                    if (data.user.identities && data.user.identities.length === 0) {
-                        mostrarError('Este email ya está registrado');
-                        registroBtn.disabled = false;
+                    console.log('Usuario creado:', data.user.id);
+                    
+                    // Generar código de 6 dígitos
+                    const codigo = generarCodigoVerificacion();
+                    console.log('Código generado:', codigo);
+                    
+                    // Guardar código en Supabase
+                    console.log('Guardando código en base de datos...');
+                    const resultGuardar = await guardarCodigoVerificacion(supabaseClient, data.user.id, email, codigo, 'registro');
+                    console.log('Resultado guardar código:', resultGuardar);
+                    
+                    // Enviar email con código
+                    console.log('Intentando enviar email a:', email);
+                    console.log('SENDGRID_API_KEY disponible:', typeof SENDGRID_API_KEY !== 'undefined' && SENDGRID_API_KEY !== '');
+                    
+                    const resultEmail = await enviarCodigoVerificacion(email, codigo, nombre);
+                    console.log('Resultado del envío de email:', resultEmail);
+                    
+                    if (resultEmail.success) {
+                        console.log('✅ Email enviado exitosamente');
+                        
+                        // Guardar email en localStorage para la página de verificación
+                        localStorage.setItem('email_verificacion', email);
+                        localStorage.setItem('user_id', data.user.id);
+                        
+                        mostrarExito('¡Registro exitoso! Revisa tu email para el código de verificación.');
+                        
+                        setTimeout(() => {
+                            console.log('Redirigiendo a verificar-email.html...');
+                            window.location.href = 'verificar-email.html';
+                        }, 2000);
                     } else {
-                        // Insertar datos adicionales en tabla de perfiles (opcional)
-                        const { error: profileError } = await supabaseClient
-                            .from('perfiles')
-                            .insert([
-                                { 
-                                    id: data.user.id,
-                                    nombre_completo: nombre,
-                                    email: email
-                                }
-                            ]);
-
-                        // Mostrar mensaje de éxito (incluso si falla el perfil)
-                        mostrarExito('Tu cuenta ha sido creada. Revisa tu email para confirmarla.');
+                        console.error('❌ Error al enviar email:', resultEmail.error);
+                        mostrarError('Error al enviar el código. Por favor intenta de nuevo.');
+                        registroBtn.disabled = false;
                     }
                 }
-
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ ERROR GENERAL:', error);
                 
                 if (error.message.includes('User already registered')) {
                     mostrarError('Este email ya está registrado');
-                } else if (error.message.includes('Password should be at least')) {
-                    mostrarError('La contraseña debe tener al menos 6 caracteres');
                 } else {
                     mostrarError('Error al registrar: ' + error.message);
                 }
