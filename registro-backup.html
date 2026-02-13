@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - ZTCHY Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #020617; color: white; font-family: sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black italic tracking-tighter text-white">ZTCHY <span class="text-indigo-500 text-2xl">WEB</span></h1>
+            <p id="status-msg" class="text-emerald-500 text-[10px] mt-2 uppercase tracking-widest font-black">✅ SISTEMA CONECTADO</p>
+        </div>
+        <form id="registroForm" class="space-y-5">
+            <input type="text" name="nombre" required placeholder="Nombre Completo" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <input type="email" name="email" required placeholder="Correo Electrónico" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <input type="password" name="password" required minlength="6" placeholder="Contraseña (mínimo 6 caracteres)" 
+                class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-white">
+            <button type="submit" id="btnSubmit" 
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest">
+                Crear Cuenta Gratis
+            </button>
+        </form>
+        <p class="mt-6 text-center text-slate-400 text-xs">
+            ¿Ya tienes cuenta? <a href="login.html" class="text-indigo-400 hover:text-indigo-300">Inicia Sesión</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('registroForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnSubmit');
+            const statusMsg = document.getElementById('status-msg');
+            
+            btn.innerText = "PROCESANDO...";
+            btn.disabled = true;
+            
+            const formData = new FormData(e.target);
+            const email = formData.get('email').toLowerCase().trim();
+            const password = formData.get('password');
+            const nombre = formData.get('nombre');
+
+            try {
+                statusMsg.textContent = "📧 Enviando código de verificación...";
+                statusMsg.className = "text-indigo-500 text-[10px] mt-2 uppercase tracking-widest font-black";
+
+                // Llamar a la API de registro
+                const response = await fetch('/api/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, nombre })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Manejar caso de usuario ya verificado
+                    if (data.action === 'redirect_to_login') {
+                        statusMsg.textContent = "✅ Cuenta ya verificada";
+                        statusMsg.className = "text-emerald-500 text-[10px] mt-2 uppercase tracking-widest font-black";
+                        
+                        if (confirm('Esta cuenta ya está registrada y verificada.\n\n¿Deseas ir a Iniciar Sesión?')) {
+                            window.location.href = 'login.html?email=' + encodeURIComponent(email);
+                        } else {
+                            btn.innerText = "Crear Cuenta Gratis";
+                            btn.disabled = false;
+                        }
+                        return;
+                    }
+                    
+                    throw new Error(data.error || 'Error en el registro');
+                }
+
+                // Éxito - redirigir a verificación
+                statusMsg.textContent = "✅ Código enviado! Redirigiendo...";
+                statusMsg.className = "text-emerald-500 text-[10px] mt-2 uppercase tracking-widest font-black";
+                
+                setTimeout(() => {
+                    window.location.href = 'verificar-correo-electronico.html?email=' + encodeURIComponent(email);
+                }, 1500);
+
+            } catch (err) {
+                console.error('❌ Error en registro:', err);
+                
+                statusMsg.textContent = "❌ " + err.message;
+                statusMsg.className = "text-rose-500 text-[10px] mt-2 uppercase tracking-widest font-black";
+                
+                btn.innerText = "Crear Cuenta Gratis";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
