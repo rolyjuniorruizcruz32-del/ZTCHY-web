@@ -16,7 +16,8 @@
 
     <div class="glass max-w-md w-full p-10 rounded-[3rem] shadow-2xl text-center">
         <h1 class="text-3xl font-black italic tracking-tighter text-white mb-2">VERIFICAR <span class="text-indigo-500">EMAIL</span></h1>
-        <p id="user-email" class="text-slate-400 text-xs font-medium mb-8">Cargando...</p>
+        <p id="user-email" class="text-slate-400 text-xs font-medium mb-2">Cargando...</p>
+        <p class="text-slate-500 text-[10px] mb-8">Revisa tu bandeja de entrada o carpeta de SPAM</p>
 
         <form id="verificarForm" class="space-y-6">
             <div class="relative">
@@ -25,7 +26,7 @@
             </div>
 
             <button type="submit" id="btnVerify"
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest">
+                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
                 Confirmar Código
             </button>
         </form>
@@ -33,8 +34,11 @@
         <div id="msg" class="mt-6 text-[10px] font-bold uppercase tracking-widest hidden"></div>
         
         <p class="mt-8 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-            ¿No recibiste nada? <button onclick="location.reload()" class="text-indigo-400">Reintentar</button>
+            ¿No recibiste nada? <button id="btnReenviar" class="text-indigo-400 hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed">Reintentar</button>
         </p>
+        
+        <!-- Timer de expiración -->
+        <p id="timer" class="mt-4 text-[10px] text-slate-600 font-bold"></p>
     </div>
 
     <script>
@@ -45,57 +49,205 @@
         // Obtener email de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const email = urlParams.get('email');
-        if (email) document.getElementById('user-email').innerText = email;
+        
+        if (!email) {
+            alert('Error: No se encontró el email. Redirigiendo al registro...');
+            window.location.href = 'registro.html';
+        } else {
+            document.getElementById('user-email').innerText = email;
+        }
 
-        document.getElementById('verificarForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btnVerify');
+        // Mostrar mensaje sobre función
+        function mostrarMensaje(texto, tipo = 'info') {
             const msg = document.getElementById('msg');
-            const inputCodigo = document.getElementById('codigo').value;
+            msg.innerText = texto;
+            msg.className = `mt-6 text-[10px] font-bold uppercase tracking-widest block text-${tipo === 'error' ? 'rose' : tipo === 'success' ? 'emerald' : 'indigo'}-${tipo === 'error' ? '500' : '400'}`;
+            msg.classList.remove('hidden');
+        }
 
-            btn.innerText = "VERIFICANDO...";
-            btn.disabled = true;
-            msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-indigo-400";
-            msg.innerText = "Buscando código...";
+        // Función para reenviar código
+        async function reenviarCodigo() {
+            const btnReenviar = document.getElementById('btnReenviar');
+            const inputCodigo = document.getElementById('codigo');
+            
+            btnReenviar.disabled = true;
+            btnReenviar.innerText = 'ENVIANDO...';
+            mostrarMensaje('Generando nuevo código...', 'info');
 
             try {
-                // 1. Buscar el código en la tabla
-                const { data, error } = await supabaseClient
-                    .from('codigos_verificacion')
-                    .select('*')
-                    .eq('email', email)
-                    .eq('codigo', inputCodigo)
-                    .eq('usado', false)
-                    .order('creado_en', { ascending: false })
-                    .limit(1)
-                    .single();
-
-                if (error || !data) throw new Error("Código incorrecto o ya utilizado.");
-
-                // 2. Verificar si expiró (15 min)
-                if (new Date(data.expira_en) < new Date()) {
-                    throw new Error("El código ha expirado. Regístrate de nuevo.");
-                }
-
-                // 3. Marcar como usado
+                // 1. Invalidar códigos anteriores
                 await supabaseClient
                     .from('codigos_verificacion')
                     .update({ usado: true })
-                    .eq('id', data.id);
+                    .eq('email', email)
+                    .eq('tipo', 'registro')
+                    .eq('usado', false);
 
-                msg.innerText = "¡CÓDIGO CORRECTO! REDIRIGIENDO...";
-                msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-emerald-400";
+                // 2. Generar nuevo código
+                const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+                const expiraEn = new Date(Date.now() + 10 * 60000).toISOString();
+
+                // 3. Guardar en DB
+                const { error: dbError } = await supabaseClient
+                    .from('codigos_verificacion')
+                    .insert([{ 
+                        email: email,
+                        codigo: codigo,
+                        tipo: 'registro',
+                        usado: false,
+                        expira_en: expiraEn,
+                        creado_en: new Date().toISOString()
+                    }]);
+
+                if (dbError) throw dbError;
+
+                // 4. Enviar email
+                const response = await fetch('/api/send-email', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        email: email,
+                        codigo: codigo,
+                        tipo: 'registro' 
+                    }) 
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al enviar email');
+                }
+
+                mostrarMensaje('✅ Código reenviado. Revisa tu email (y SPAM).', 'success');
+                inputCodigo.value = '';
+                inputCodigo.focus();
+
+                // Deshabilitar botón por 30 segundos
+                let countdown = 30;
+                const interval = setInterval(() => {
+                    btnReenviar.innerText = `ESPERA ${countdown}s`;
+                    countdown--;
+                    if (countdown < 0) {
+                        clearInterval(interval);
+                        btnReenviar.innerText = 'REINTENTAR';
+                        btnReenviar.disabled = false;
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.error('❌ Error al reenviar:', err);
+                mostrarMensaje('Error: ' + err.message, 'error');
+                btnReenviar.innerText = 'REINTENTAR';
+                btnReenviar.disabled = false;
+            }
+        }
+
+        // Event listener para reenviar
+        document.getElementById('btnReenviar').addEventListener('click', reenviarCodigo);
+
+        // Formulario de verificación
+        document.getElementById('verificarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnVerify');
+            const inputCodigo = document.getElementById('codigo');
+            const codigoIngresado = inputCodigo.value.trim();
+
+            // Validación básica
+            if (codigoIngresado.length !== 6) {
+                mostrarMensaje('El código debe tener 6 dígitos', 'error');
+                return;
+            }
+
+            btn.innerText = "VERIFICANDO...";
+            btn.disabled = true;
+            mostrarMensaje("Validando código...", "info");
+
+            try {
+                console.log('🔍 Buscando código:', { email, codigo: codigoIngresado });
+
+                // 1. Buscar el código en la tabla (normalizado)
+                const { data, error } = await supabaseClient
+                    .from('codigos_verificacion')
+                    .select('*')
+                    .eq('email', email.toLowerCase().trim()) // Normalizar
+                    .eq('codigo', codigoIngresado) // Código tal cual
+                    .eq('tipo', 'registro')
+                    .eq('usado', false)
+                    .order('creado_en', { ascending: false })
+                    .limit(1);
+
+                console.log('📊 Resultado búsqueda:', { data, error });
+
+                if (error) {
+                    console.error('❌ Error en query:', error);
+                    throw new Error("Error al buscar código: " + error.message);
+                }
+
+                if (!data || data.length === 0) {
+                    throw new Error("Código incorrecto o ya utilizado");
+                }
+
+                const codigoData = data[0];
+
+                // 2. Verificar si expiró (10 minutos)
+                const ahora = new Date();
+                const expiracion = new Date(codigoData.expira_en);
                 
+                console.log('⏰ Verificando expiración:', {
+                    ahora: ahora.toISOString(),
+                    expiracion: expiracion.toISOString(),
+                    expirado: ahora > expiracion
+                });
+
+                if (ahora > expiracion) {
+                    // Marcar como usado
+                    await supabaseClient
+                        .from('codigos_verificacion')
+                        .update({ usado: true })
+                        .eq('id', codigoData.id);
+                    
+                    throw new Error("El código ha expirado. Solicita uno nuevo.");
+                }
+
+                // 3. Marcar como usado
+                const { error: updateError } = await supabaseClient
+                    .from('codigos_verificacion')
+                    .update({ usado: true })
+                    .eq('id', codigoData.id);
+
+                if (updateError) {
+                    console.error('❌ Error al actualizar:', updateError);
+                    throw new Error("Error al marcar código como usado");
+                }
+
+                console.log('✅ Código verificado exitosamente');
+
+                mostrarMensaje("¡CÓDIGO CORRECTO! REDIRIGIENDO...", "success");
+                
+                // 4. Redirigir al dashboard
                 setTimeout(() => {
-                    window.location.href = 'index.html'; // Cambia esto a tu dashboard
+                    window.location.href = 'dashboard.html';
                 }, 2000);
 
             } catch (err) {
-                msg.innerText = "ERROR: " + err.message;
-                msg.className = "mt-6 text-[10px] font-bold uppercase tracking-widest block text-rose-500";
+                console.error('❌ Error en verificación:', err);
+                mostrarMensaje("ERROR: " + err.message, "error");
+                
                 btn.innerText = "CONFIRMAR CÓDIGO";
                 btn.disabled = false;
+                
+                // Limpiar input si el código es incorrecto
+                inputCodigo.value = '';
+                inputCodigo.focus();
             }
+        });
+
+        // Auto-focus en el input
+        document.getElementById('codigo').focus();
+
+        // Permitir solo números en el input
+        document.getElementById('codigo').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
     </script>
 </body>
