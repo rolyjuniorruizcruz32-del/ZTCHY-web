@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificar Código - ZTCHY Web</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #020617; color: white; font-family: sans-serif; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
@@ -36,16 +35,9 @@
         <p class="mt-8 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             ¿No recibiste nada? <button id="btnReenviar" class="text-indigo-400 hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed">Reintentar</button>
         </p>
-        
-        <!-- Timer de expiración -->
-        <p id="timer" class="mt-4 text-[10px] text-slate-600 font-bold"></p>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://ifihdyucteqqcyztqlxl.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaWhkeXVjdGVxcWN5enRxbHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MzkyNzYsImV4cCI6MjA4NjAxNTI3Nn0.8OGv4Ojoh2CDUK6xxnDPC5nGXyYID6l9p_ClyinDCyo';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         // Obtener email de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const email = urlParams.get('email');
@@ -57,7 +49,7 @@
             document.getElementById('user-email').innerText = email;
         }
 
-        // Mostrar mensaje sobre función
+        // Función para mostrar mensajes
         function mostrarMensaje(texto, tipo = 'info') {
             const msg = document.getElementById('msg');
             msg.innerText = texto;
@@ -75,53 +67,27 @@
             mostrarMensaje('Generando nuevo código...', 'info');
 
             try {
-                // 1. Invalidar códigos anteriores
-                await supabaseClient
-                    .from('codigos_verificacion')
-                    .update({ usado: true })
-                    .eq('email', email)
-                    .eq('tipo', 'registro')
-                    .eq('usado', false);
-
-                // 2. Generar nuevo código
-                const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-                const expiraEn = new Date(Date.now() + 10 * 60000).toISOString();
-
-                // 3. Guardar en DB
-                const { error: dbError } = await supabaseClient
-                    .from('codigos_verificacion')
-                    .insert([{ 
-                        email: email,
-                        codigo: codigo,
-                        tipo: 'registro',
-                        usado: false,
-                        expira_en: expiraEn,
-                        creado_en: new Date().toISOString()
-                    }]);
-
-                if (dbError) throw dbError;
-
-                // 4. Enviar email
-                const response = await fetch('/api/send-email', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
+                // Llamar a la API de registro nuevamente
+                const response = await fetch('/api/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         email: email,
-                        codigo: codigo,
-                        tipo: 'registro' 
-                    }) 
+                        password: 'temp_password', // Password temporal, se ignora si ya existe
+                        nombre: 'Usuario' // Nombre temporal
+                    })
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error al enviar email');
+                    throw new Error(errorData.error || 'Error al reenviar código');
                 }
 
                 mostrarMensaje('✅ Código reenviado. Revisa tu email (y SPAM).', 'success');
                 inputCodigo.value = '';
                 inputCodigo.focus();
 
-                // Deshabilitar botón por 30 segundos
+                // Countdown
                 let countdown = 30;
                 const interval = setInterval(() => {
                     btnReenviar.innerText = `ESPERA ${countdown}s`;
@@ -163,70 +129,34 @@
             mostrarMensaje("Validando código...", "info");
 
             try {
-                console.log('🔍 Buscando código:', { email, codigo: codigoIngresado });
+                console.log('🔍 Verificando código:', { email, codigo: codigoIngresado });
 
-                // 1. Buscar el código en la tabla (normalizado)
-                const { data, error } = await supabaseClient
-                    .from('codigos_verificacion')
-                    .select('*')
-                    .eq('email', email.toLowerCase().trim()) // Normalizar
-                    .eq('codigo', codigoIngresado) // Código tal cual
-                    .eq('tipo', 'registro')
-                    .eq('usado', false)
-                    .order('creado_en', { ascending: false })
-                    .limit(1);
-
-                console.log('📊 Resultado búsqueda:', { data, error });
-
-                if (error) {
-                    console.error('❌ Error en query:', error);
-                    throw new Error("Error al buscar código: " + error.message);
-                }
-
-                if (!data || data.length === 0) {
-                    throw new Error("Código incorrecto o ya utilizado");
-                }
-
-                const codigoData = data[0];
-
-                // 2. Verificar si expiró (10 minutos)
-                const ahora = new Date();
-                const expiracion = new Date(codigoData.expira_en);
-                
-                console.log('⏰ Verificando expiración:', {
-                    ahora: ahora.toISOString(),
-                    expiracion: expiracion.toISOString(),
-                    expirado: ahora > expiracion
+                // Llamar a la API de verificación completa
+                const response = await fetch('/api/verificar-codigo-completo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: email,
+                        codigo: codigoIngresado
+                    })
                 });
 
-                if (ahora > expiracion) {
-                    // Marcar como usado
-                    await supabaseClient
-                        .from('codigos_verificacion')
-                        .update({ usado: true })
-                        .eq('id', codigoData.id);
-                    
-                    throw new Error("El código ha expirado. Solicita uno nuevo.");
-                }
+                const data = await response.json();
 
-                // 3. Marcar como usado
-                const { error: updateError } = await supabaseClient
-                    .from('codigos_verificacion')
-                    .update({ usado: true })
-                    .eq('id', codigoData.id);
-
-                if (updateError) {
-                    console.error('❌ Error al actualizar:', updateError);
-                    throw new Error("Error al marcar código como usado");
+                if (!response.ok) {
+                    if (data.expired) {
+                        throw new Error('El código ha expirado. Solicita uno nuevo.');
+                    }
+                    throw new Error(data.error || 'Código incorrecto');
                 }
 
                 console.log('✅ Código verificado exitosamente');
 
-                mostrarMensaje("¡CÓDIGO CORRECTO! REDIRIGIENDO...", "success");
+                mostrarMensaje("¡CUENTA CREADA! REDIRIGIENDO...", "success");
                 
-                // 4. Redirigir al dashboard
+                // Redirigir al login o dashboard
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = 'login.html?email=' + encodeURIComponent(email) + '&verified=true';
                 }, 2000);
 
             } catch (err) {
@@ -236,7 +166,7 @@
                 btn.innerText = "CONFIRMAR CÓDIGO";
                 btn.disabled = false;
                 
-                // Limpiar input si el código es incorrecto
+                // Limpiar input
                 inputCodigo.value = '';
                 inputCodigo.focus();
             }
@@ -245,7 +175,7 @@
         // Auto-focus en el input
         document.getElementById('codigo').focus();
 
-        // Permitir solo números en el input
+        // Permitir solo números
         document.getElementById('codigo').addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
