@@ -1,67 +1,127 @@
-const { createClient } = require('@supabase/supabase-js');
-const sgMail = require('@sendgrid/mail');
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
 module.exports = async function handler(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Metodo no permitido' });
-  }
-
-  const { email, password, nombre } = req.body;
-  
-  if (!email || !password || !nombre) {
-    return res.status(400).json({ error: 'Faltan campos' });
-  }
-
-  const emailNormalizado = email.toLowerCase().trim();
+  const diagnostico = {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    env_vars: {
+      has_supabase_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      has_supabase_key: !!process.env.SUPABASE_SERVICE_KEY,
+      has_sendgrid_key: !!process.env.SENDGRID_API_KEY
+    }
+  };
 
   try {
-    const { data: { users } } = await supabase.auth.admin.listUsers();
-    const usuarioExistente = users?.find(u => u.email === emailNormalizado);
-
-    if (usuarioExistente && usuarioExistente.email_confirmed_at) {
-      return res.status(409).json({ 
-        error: 'Cuenta ya verificada',
-        action: 'redirect_to_login',
-        email: emailNormalizado
+    res.setHeader('Content-Type', 'application/json');
+    
+    if (req.method !== 'POST') {
+      return res.status(405).json({ 
+        error: 'Method not allowed',
+        diagnostico 
       });
     }
 
-    if (usuarioExistente && !usuarioExistente.email_confirmed_at) {
-      await supabase.auth.admin.deleteUser(usuarioExistente.id);
+    // Test 1: Verificar que lleguen los datos
+    const { email, password, nombre } = req.body || {};
+    diagnostico.datos_recibidos = { email, password: !!password, nombre };
+
+    if (!email || !password || !nombre) {
+      return res.status(400).json({ 
+        error: 'Faltan campos',
+        diagnostico 
+      });
     }
 
-    await supabase.from('codigos_verificacion').update({ usado: true }).eq('email', emailNormalizado).eq('usado', false);
-    await supabase.from('registros_temporales').upsert([{
-      email: emailNormalizado,
-      password_hash: password,
-      nombre: nombre,
-      expira_en: new Date(Date.now() + 15 * 60000).toISOString()
-    }], { onConflict: 'email' });
+    // Test 2: Verificar Supabase
+    let supabaseTest = 'NO PROBADO';
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_KEY
+      );
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) {
+        supabaseTest = 'ERROR: ' + error.message;
+      } else {
+        supabaseTest = 'OK - ' + (data?.users?.length || 0) + ' usuarios encontrados';
+      }
+    } catch (err) {
+      supabaseTest = 'EXCEPTION: ' + err.message;
+    }
+    diagnostico.supabase_test = supabaseTest;
 
-    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiraEn = new Date(Date.now() + 10 * 60000).toISOString();
+    // Test 3: Verificar SendGrid
+    let sendgridTest = 'NO PROBADO';
+    try {
+      const sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      sendgridTest = 'OK - API key configurada';
+    } catch (err) {
+      sendgridTest = 'ERROR: ' + err.message;
+    }
+    diagnostico.sendgrid_test = sendgridTest;
 
-    await supabase.from('codigos_verificacion').insert([{ 
-      email: emailNormalizado, codigo: codigo, tipo: 'registro', usado: false, expira_en: expiraEn
-    }]);
+    // Test 4: Verificar tabla codigos_verificacion
+    let tablaTest = 'NO PROBADO';
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_KEY
+      );
+      const { data, error } = await supabase
+        .from('codigos_verificacion')
+        .select('*')
+        .limit(1);
+      
+      if (error) {
+        tablaTest = 'ERROR: ' + error.message;
+      } else {
+        tablaTest = 'OK - Tabla existe';
+      }
+    } catch (err) {
+      tablaTest = 'EXCEPTION: ' + err.message;
+    }
+    diagnostico.tabla_codigos_test = tablaTest;
 
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    await sgMail.send({
-      to: emailNormalizado,
-      from: { email: 'ztchyweb@gmail.com', name: 'ZTCHY Web' },
-      subject: 'Codigo de Verificacion - ZTCHY',
-      html: '<h1>' + codigo + '</h1><p>Expira en 10 minutos</p>'
+    // Test 5: Verificar tabla registros_temporales
+    let tablaTempTest = 'NO PROBADO';
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_KEY
+      );
+      const { data, error } = await supabase
+        .from('registros_temporales')
+        .select('*')
+        .limit(1);
+      
+      if (error) {
+        tablaTempTest = 'ERROR: ' + error.message;
+      } else {
+        tablaTempTest = 'OK - Tabla existe';
+      }
+    } catch (err) {
+      tablaTempTest = 'EXCEPTION: ' + err.message;
+    }
+    diagnostico.tabla_temp_test = tablaTempTest;
+
+    // Si todo está bien hasta aquí
+    return res.status(200).json({
+      mensaje: 'DIAGNOSTICO COMPLETO',
+      todos_los_tests_pasaron: true,
+      diagnostico,
+      siguiente_paso: 'Si ves esto, el problema no es de configuracion. El codigo funcional deberia funcionar.'
     });
 
-    return res.status(200).json({ success: true, email: emailNormalizado });
   } catch (error) {
-    return res.status(500).json({ error: 'Error', details: error.message });
+    return res.status(500).json({
+      error: 'Error en diagnostico',
+      mensaje: error.message,
+      stack: error.stack,
+      diagnostico
+    });
   }
 };
