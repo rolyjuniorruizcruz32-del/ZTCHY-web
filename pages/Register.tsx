@@ -15,18 +15,32 @@ export default function Register() {
     setLoading(true);
     setMsg('');
     
-    const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { emailRedirectTo: window.location.origin }
-    });
-    
-    if (error) {
-      setMsg('Error: ' + error.message);
-    } else {
-      setMsg('¡Éxito! Revisa tu correo para activar tu cuenta.');
+    try {
+      const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: { 
+            emailRedirectTo: window.location.origin,
+            data: {
+              full_name: email.split('@')[0] // Metadata opcional
+            }
+          }
+      });
+      
+      if (error) {
+        if (error.status === 422) {
+          setMsg('Error: Este correo ya está registrado. Intenta iniciar sesión.');
+        } else {
+          setMsg('Error: ' + error.message);
+        }
+      } else {
+        setMsg('¡Éxito! Revisa tu bandeja de entrada para verificar tu correo.');
+      }
+    } catch (err) {
+      setMsg('Ocurrió un error inesperado.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -37,6 +51,7 @@ export default function Register() {
           <input 
             type="email" 
             required 
+            placeholder="correo@ejemplo.com"
             className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" 
             onChange={e => setEmail(e.target.value)} 
           />
@@ -53,20 +68,20 @@ export default function Register() {
         </div>
         <button 
           disabled={loading}
-          className="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+          className="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 shadow-lg shadow-indigo-100"
         >
-          {loading ? 'Creando cuenta...' : 'Registrarse'}
+          {loading ? 'Procesando...' : 'Registrarse'}
         </button>
       </form>
       
       {msg && (
-        <p className={`mt-4 text-center p-3 rounded-lg text-sm font-medium ${msg.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+        <div className={`mt-4 p-3 rounded-xl text-sm font-medium border ${msg.includes('Error') ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
           {msg}
-        </p>
+        </div>
       )}
       
       <p className="mt-6 text-center text-sm text-gray-600">
-        ¿Ya tienes cuenta? <Link to="/login" className="text-indigo-600 font-bold">Inicia sesión</Link>
+        ¿Ya tienes cuenta? <Link to="/login" className="text-indigo-600 font-bold hover:underline">Inicia sesión</Link>
       </p>
     </AuthLayout>
   );
