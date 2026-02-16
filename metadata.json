@@ -1,5 +1,0 @@
-{
-  "name": "Supabase Auth Pro",
-  "description": "A high-end authentication system featuring login, registration with email verification, and password recovery using Supabase and SendGrid integration.",
-  "requestFramePermissions": []
-}
